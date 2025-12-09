@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Booking Price Analyzer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .btn-logout {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 8px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .search-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+
+        .search-panel h2 {
+            color: #333;
+            margin-bottom: 25px;
+            font-size: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .form-group input {
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-content {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-card h3 {
+            color: #666;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            color: #333;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .subtitle {
+            color: #999;
+            font-size: 12px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .chart-card h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .table-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f9fa;
+            padding: 12px;
+            text-align: left;
+            font-size: 13px;
+            font-weight: 600;
+            color: #555;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        td {
+            padding: 12px;
+            font-size: 14px;
+            color: #333;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-yours {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .badge-competitor {
+            background: #fce4ec;
+            color: #c2185b;
+        }
+
+        .rating-stars {
+            color: #ffc107;
+        }
+
+        .btn-export {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .btn-export:hover {
+            background: #45a049;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #a5d6a7;
+        }
+
+        .alert-error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ef9a9a;
+        }
+
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏨 Booking Price Analyzer</h1>
+        <div class="user-info">
+            <span>Olá, {{ user.username }}!</span>
+            <a href="/logout" class="btn-logout">Sair</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="alert" class="alert"></div>
+
+        <div class="search-panel">
+            <h2>🔍 Nova Análise de Preços</h2>
+            <form id="searchForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="checkin">Check-in</label>
+                        <input type="date" id="checkin" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="checkout">Check-out</label>
+                        <input type="date" id="checkout" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="adults">Adultos</label>
+                        <input type="number" id="adults" min="1" max="10" value="2" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="children">Crianças</label>
+                        <input type="number" id="children" min="0" max="10" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="rooms">Quartos</label>
+                        <input type="number" id="rooms" min="1" max="5" value="1" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-primary" id="btnSearch">
+                    Buscar Preços
+                </button>
+            </form>
+        </div>
+
+        <div class="results-section" id="resultsSection">
+            <div class="stats-grid" id="statsGrid"></div>
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3>📊 Comparação de Preços Médios</h3>
+                    <canvas id="priceChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>⭐ Notas de Avaliação</h3>
+                    <canvas id="ratingChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-card" style="margin-bottom: 20px;">
+                <h3>💰 Distribuição de Preços por Hotel</h3>
+                <canvas id="distributionChart"></canvas>
+            </div>
+            <div class="table-card">
+                <h3>📋 Detalhamento Completo</h3>
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Hotel</th>
+                            <th>Tipo</th>
+                            <th>Tipo Quarto</th>
+                            <th>Preço</th>
+                            <th>Avaliação</th>
+                            <th>Estrelas</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+                <button class="btn-export" id="btnExport">📥 Exportar para Excel</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <h3>Analisando preços...</h3>
+            <p>Isso pode levar alguns minutos</p>
+        </div>
+    </div>
+
+    <script>
+        let currentSearchId = null;
+        let currentData = null;
+
+        // Definir data mínima como hoje
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('checkin').min = today;
+        document.getElementById('checkout').min = today;
+
+        // Atualizar data mínima de checkout quando checkin mudar
+        document.getElementById('checkin').addEventListener('change', (e) => {
+            const checkin = new Date(e.target.value);
+            checkin.setDate(checkin.getDate() + 1);
+            document.getElementById('checkout').min = checkin.toISOString().split('T')[0];
+        });
+
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const checkin = document.getElementById('checkin').value;
+            const checkout = document.getElementById('checkout').value;
+            const adults = document.getElementById('adults').value;
+            const children = document.getElementById('children').value;
+            const rooms = document.getElementById('rooms').value;
+            
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('btnSearch').disabled = true;
+            
+            try {
+                const response = await fetch('/api/scrape', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ checkin, checkout, adults, children, rooms })
+                });
+                
+                const result = await response.json();
+                
+                document.getElementById('loadingOverlay').style.display = 'none';
+                document.getElementById('btnSearch').disabled = false;
+                
+                if (result.success) {
+                    currentSearchId = result.search_id;
+                    currentData = result.data;
+                    displayResults(result.data);
+                    showAlert('Análise concluída com sucesso!', 'success');
+                } else {
+                    showAlert('Erro: ' + result.error, 'error');
+                }
+            } catch (error) {
+                document.getElementById('loadingOverlay').style.display = 'none';
+                document.getElementById('btnSearch').disabled = false;
+                showAlert('Erro de conexão. Tente novamente.', 'error');
+            }
+        });
+
+        function showAlert(message, type) {
+            const alert = document.getElementById('alert');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alert.style.display = 'block';
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 5000);
+        }
+
+        function displayResults(data) {
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            // Calcular estatísticas
+            const yourHotel = data.find(h => h.is_yours);
+            const competitors = data.filter(h => !h.is_yours);
+            
+            const yourPrices = yourHotel ? yourHotel.rooms.map(r => r.price) : [];
+            const yourAvg = yourPrices.length ? yourPrices.reduce((a, b) => a + b, 0) / yourPrices.length : 0;
+            
+            const allCompPrices = competitors.flatMap(h => h.rooms.map(r => r.price));
+            const compAvg = allCompPrices.length ? allCompPrices.reduce((a, b) => a + b, 0) / allCompPrices.length : 0;
+            
+            const diff = yourAvg - compAvg;
+            const diffPercent = compAvg ? ((diff / compAvg) * 100).toFixed(1) : 0;
+            
+            // Estatísticas
+            const statsHtml = `
+                <div class="stat-card">
+                    <h3>Seu Preço Médio</h3>
+                    <div class="value">R$ ${yourAvg.toFixed(2)}</div>
+                    <div class="subtitle">${yourPrices.length} quartos analisados</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Média dos Concorrentes</h3>
+                    <div class="value">R$ ${compAvg.toFixed(2)}</div>
+                    <div class="subtitle">${allCompPrices.length} quartos analisados</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Diferença</h3>
+                    <div class="value" style="color: ${diff < 0 ? '#4caf50' : '#f44336'}">
+                        ${diff >= 0 ? '+' : ''}${diffPercent}%
+                    </div>
+                    <div class="subtitle">${diff < 0 ? 'Você está abaixo' : 'Você está acima'}</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Hotéis</h3>
+                    <div class="value">${data.length}</div>
+                    <div class="subtitle">${competitors.length} concorrentes</div>
+                </div>
+            `;
+            document.getElementById('statsGrid').innerHTML = statsHtml;
+            
+            // Gráfico de preços
+            createPriceChart(data);
+            createRatingChart(data);
+            createDistributionChart(data);
+            createTable(data);
+        }
+
+        function createPriceChart(data) {
+            const ctx = document.getElementById('priceChart');
+            const hotels = data.map(h => h.hotel_name);
+            const avgPrices = data.map(h => {
+                const prices = h.rooms.map(r => r.price);
+                return prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
+            });
+            const colors = data.map(h => h.is_yours ? '#667eea' : '#e0e0e0');
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: hotels,
+                    datasets: [{
+                        label: 'Preço Médio (R$)',
+                        data: avgPrices,
+                        backgroundColor: colors,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function createRatingChart(data) {
+            const ctx = document.getElementById('ratingChart');
+            const hotels = data.map(h => h.hotel_name);
+            const ratings = data.map(h => h.rating.review_score || 0);
+            const colors = data.map(h => h.is_yours ? '#667eea' : '#e0e0e0');
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: hotels,
+                    datasets: [{
+                        label: 'Nota de Avaliação',
+                        data: ratings,
+                        backgroundColor: colors,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            max: 10
+                        }
+                    }
+                }
+            });
+        }
+
+        function createDistributionChart(data) {
+            const ctx = document.getElementById('distributionChart');
+            const allRooms = data.flatMap(h => 
+                h.rooms.map(r => ({ hotel: h.hotel_name, price: r.price, yours: h.is_yours }))
+            );
+            
+            const yourRooms = allRooms.filter(r => r.yours);
+            const compRooms = allRooms.filter(r => !r.yours);
+            
+            new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Seu Hotel',
+                            data: yourRooms.map((r, i) => ({ x: i, y: r.price })),
+                            backgroundColor: '#667eea',
+                            borderColor: '#667eea',
+                            pointRadius: 6
+                        },
+                        {
+                            label: 'Concorrentes',
+                            data: compRooms.map((r, i) => ({ x: i + yourRooms.length, y: r.price })),
+                            backgroundColor: '#e0e0e0',
+                            borderColor: '#e0e0e0',
+                            pointRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { display: true, text: 'Preço (R$)' }
+                        },
+                        x: {
+                            title: { display: true, text: 'Quartos' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createTable(data) {
+            const tbody = document.getElementById('tableBody');
+            let html = '';
+            
+            data.forEach(hotel => {
+                hotel.rooms.forEach(room => {
+                    const badge = hotel.is_yours ? 
+                        '<span class="badge badge-yours">SEU</span>' : 
+                        '<span class="badge badge-competitor">CONCORRENTE</span>';
+                    
+                    const stars = hotel.rating.stars ? 
+                        '<span class="rating-stars">' + '⭐'.repeat(hotel.rating.stars) + '</span>' : 
+                        '-';
+                    
+                    const rating = hotel.rating.review_score ? 
+                        `${hotel.rating.review_score.toFixed(1)} (${hotel.rating.review_count || 0})` : 
+                        '-';
+                    
+                    html += `
+                        <tr>
+                            <td>${hotel.hotel_name}</td>
+                            <td>${badge}</td>
+                            <td>${room.room_type}</td>
+                            <td><strong>R$ ${room.price.toFixed(2)}</strong></td>
+                            <td>${rating}</td>
+                            <td>${stars}</td>
+                        </tr>
+                    `;
+                });
+            });
+            
+            tbody.innerHTML = html;
+        }
+
+        document.getElementById('btnExport').addEventListener('click', () => {
+            if (currentSearchId) {
+                window.location.href = `/api/export/${currentSearchId}`;
+            }
+        });
+    </script>
+</body>
+</html>
